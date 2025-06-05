@@ -27,6 +27,49 @@ class UmkmController extends Controller
         return view('umkms.create');
     }
 
+    public function edit($id)
+    {
+        // 1. Find the UMKM by ID
+        // If not found, it will throw a ModelNotFoundException which Laravel handles automatically
+        $umkm = Umkm::findOrFail($id);
+
+        // 2. Return the edit view with the UMKM data
+        return view('umkms.edit', compact('umkm'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        // 1. Validate the incoming request data
+        $validatedData = $request->validate([
+            'nama_bisnis' => 'required|string|max:255|unique:umkms,nama_bisnis,' . $id, // Unique except for current UMKM
+            'omzet_penjualan_juta_idr' => 'required|integer|min:0',
+            'profitabilitas_persen' => 'required|integer|min:0|max:100',
+            'skor_kredit' => 'required|integer|min:0|max:100',
+            'solvabilitas_der' => 'required|integer|min:0',
+            'beban_utang_eksisting_juta_idr_bln' => 'required|integer|min:0',
+        ]);
+
+        // 2. Find the UMKM by ID and update it
+        $umkm = Umkm::findOrFail($id);
+        $umkm->update($validatedData);
+
+        // 3. Redirect back to the edit form with a success message
+        return redirect()->route('umkms.analysis', $id)->with('success', 'UMKM data updated successfully!');
+        
+    }
+
+    public function destroy($id)
+    {
+        // 1. Find the UMKM by ID
+        $umkm = Umkm::findOrFail($id);
+
+        // 2. Delete the UMKM record
+        $umkm->delete();
+
+        // 3. Redirect back to the create form with a success message
+        return redirect()->route('umkms.analysis')->with('success', 'UMKM data deleted successfully!');
+    }
+
     /**
      * Store a newly created UMKM in storage.
      * Handles POST /umkms
@@ -51,7 +94,7 @@ class UmkmController extends Controller
         Umkm::create($validatedData);
 
         // 3. Redirect back to the form with a success message
-        return redirect()->route('umkms.create')->with('success', 'UMKM data added successfully!');
+        return redirect()->route('umkms.analysis')->with('success', 'UMKM data added successfully!');
     }
 
     /**

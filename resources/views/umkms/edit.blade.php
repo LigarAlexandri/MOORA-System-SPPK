@@ -48,7 +48,7 @@
 
 <body class="bg-yellow-100 min-h-screen pt-20 flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-3xl">
-        <h1 class="text-3xl font-bold text-gray-800 text-center mb-6">Add New UMKM Data</h1>
+        <h1 class="text-3xl font-bold text-gray-800 text-center mb-6">Edit UMKM Data</h1>
 
         @if (session('success'))
             <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md relative mb-4" role="alert">
@@ -68,54 +68,56 @@
             </div>
         @endif
 
-        <form action="{{ route('umkms.store') }}" method="POST" class="space-y-4">
-            @csrf <div>
-                <label for="nama_bisnis" class="block text-gray-700 text-sm font-medium mb-1">Nama Bisnis</label>
-                <input type="text" id="nama_bisnis" name="nama_bisnis" value="{{ old('nama_bisnis') }}"
-                       class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                       placeholder="e.g., Toko Jaya Abadi" required>
-            </div>
+    <form action="{{ route('umkms.update', $umkm->id) }}" method="POST" class="space-y-4">
+        @csrf
+        @method('PUT')
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="omzet_penjualan_juta_idr" class="block text-gray-700 text-sm font-medium mb-1">Omzet Penjualan (Juta IDR/Tahun)</label>
-                    <input type="number" id="omzet_penjualan_juta_idr" name="omzet_penjualan_juta_idr" value="{{ old('omzet_penjualan_juta_idr') }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                           placeholder="e.g., 1500" required min="0">
-                </div>
-                <div>
-                    <label for="profitabilitas_persen" class="block text-gray-700 text-sm font-medium mb-1">Profitabilitas (%)</label>
-                    <input type="number" id="profitabilitas_persen" name="profitabilitas_persen" value="{{ old('profitabilitas_persen') }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                           placeholder="e.g., 15" required min="0" max="100">
-                </div>
-            </div>
+        <div>
+            <label for="nama_bisnis">Nama Bisnis</label>
+            <input type="text" name="nama_bisnis" id="nama_bisnis" value="{{ old('nama_bisnis', $umkm->nama_bisnis) }}"
+                class="w-full px-4 py-2 border rounded" required>
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="skor_kredit" class="block text-gray-700 text-sm font-medium mb-1">Skor Kredit (0-100)</label>
-                    <input type="number" id="skor_kredit" name="skor_kredit" value="{{ old('skor_kredit') }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                           placeholder="e.g., 75" required min="0" max="100">
-                </div>
-                <div>
-                    <label for="solvabilitas_der" class="block text-gray-700 text-sm font-medium mb-1">Solvabilitas (Debt-to-Equity Ratio)</label>
-                    <input type="number" step="1" id="solvabilitas_der" name="solvabilitas_der" value="{{ old('solvabilitas_der') }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                           placeholder="e.g., 1" required min="0">
-                </div>
-            </div>
-
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label for="beban_utang_eksisting_juta_idr_bln" class="block text-gray-700 text-sm font-medium mb-1">Beban Utang Eksisting (Juta IDR/Bulan)</label>
-                <input type="number" id="beban_utang_eksisting_juta_idr_bln" name="beban_utang_eksisting_juta_idr_bln" value="{{ old('beban_utang_eksisting_juta_idr_bln') }}"
-                       class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                       placeholder="e.g., 10" required min="0">
+                <label for="omzet_penjualan_juta_idr">Omzet Penjualan (Juta IDR/Tahun)</label>
+                <input type="number" name="omzet_penjualan_juta_idr" id="omzet_penjualan_juta_idr"
+                    value="{{ old('omzet_penjualan_juta_idr', $umkm->omzet_penjualan_juta_idr) }}"
+                    class="w-full px-4 py-2 border rounded" required>
             </div>
+            <div>
+                <label for="profitabilitas_persen">Profitabilitas (%)</label>
+                <input type="number" name="profitabilitas_persen" id="profitabilitas_persen"
+                    value="{{ old('profitabilitas_persen', $umkm->profitabilitas_persen) }}"
+                    class="w-full px-4 py-2 border rounded" required>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="skor_kredit">Skor Kredit (0-100)</label>
+                <input type="number" name="skor_kredit" id="skor_kredit"
+                    value="{{ old('skor_kredit', $umkm->skor_kredit) }}"
+                    class="w-full px-4 py-2 border rounded" required>
+            </div>
+            <div>
+                <label for="solvabilitas_der">Solvabilitas (DER)</label>
+                <input type="number" name="solvabilitas_der" id="solvabilitas_der"
+                    value="{{ old('solvabilitas_der', $umkm->solvabilitas_der) }}"
+                    class="w-full px-4 py-2 border rounded" required>
+            </div>
+        </div>
+
+        <div>
+            <label for="beban_utang_eksisting_juta_idr_bln">Beban Utang Eksisting (Juta IDR/Bulan)</label>
+            <input type="number" name="beban_utang_eksisting_juta_idr_bln" id="beban_utang_eksisting_juta_idr_bln"
+                value="{{ old('beban_utang_eksisting_juta_idr_bln', $umkm->beban_utang_eksisting_juta_idr_bln) }}"
+                class="w-full px-4 py-2 border rounded" required>
+        </div>
 
             <button type="submit"
                     class="w-full bg-green-800 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition duration-300 ease-in-out transform hover:scale-105">
-                Add UMKM
+                Edit UMKM
             </button>
         </form>
 

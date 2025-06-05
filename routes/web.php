@@ -30,3 +30,5 @@ Route::post('/umkms', [UmkmController::class, 'store'])->name('umkms.store');
 // Route to display the MOORA analysis and ranking (GET request)
 // Named 'umkms.analysis'
 Route::get('/umkms/analysis', [UmkmController::class, 'analyze'])->name('umkms.analysis');
+
+Route::resource('umkms', UmkmController::class);
