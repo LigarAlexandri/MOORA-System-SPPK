@@ -46,8 +46,7 @@
 </nav>
 
 <body class="bg-yellow-100 min-h-screen pt-20">
-    <div class="container mx-auto  p-8 rounded-lg ">
-        {{-- <h1 class="text-3xl font-bold text-gray-800 text-center mb-8">UMKM Loan Eligibility</h1> --}}
+    <div class="container mx-auto p-8 rounded-lg ">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <h1 class="text-3xl font-bold text-gray-800 text-center md:text-left mb-4 md:mb-0">UMKM Loan Eligibility</h1>
             <a href="{{ route('umkms.create') }}"
@@ -55,17 +54,31 @@
                 Add New UMKM
             </a>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-10">
-            @foreach (['Omzet Penjualan', 'Profitabilitas', 'Skor Kredit', 'Solvabilitas', 'Beban Utang Eksisting'] as $label)
+
+        {{-- Display Weights Section --}}
+        <h2 class="text-2xl font-semibold mb-4 text-center">Bobot Kriteria (CRITIC Method)</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
+            @php
+                $criterionTitles = [
+                    'omzet_penjualan_juta_idr' => 'Omzet Penjualan (Juta IDR)',
+                    'profitabilitas_persen' => 'Profitabilitas (%)',
+                    'solvabilitas_der' => 'Solvabilitas (DER)',
+                    'beban_utang_eksisting_juta_idr_bln' => 'Beban Utang Eksisting (Juta IDR/Bulan)',
+                    'skor_kredit' => 'Skor Kredit',
+                ];
+            @endphp
+
+            @foreach($weights as $criterionName => $weightValue)
                 <div class="bg-yellow-50 border-l-4 border-orange-300 rounded-lg shadow p-4 text-center">
-                    <h2 class="text-lg font-semibold mb-2">{{ $label }}</h2>
-                    <p class="text-2xl font-bold text-gray-900">0.000</p>
+                    <h2 class="text-lg font-semibold mb-2">{{ $criterionTitles[$criterionName] ?? $criterionName }}</h2>
+                    <p class="text-2xl font-bold text-gray-900">{{ number_format($weightValue, 3) }}</p> {{-- Display weight, rounded to 3 decimal places --}}
                 </div>
             @endforeach
         </div>
+
         <h1 class="text-3xl font-bold text-gray-800 text-center">Recommendation Ranking (MOORA)</h1>
     </div>
-        <div class="container mx-auto bg-white p-8 rounded-lg shadow-xl mb-8">        
+    <div class="container mx-auto bg-white p-8 rounded-lg shadow-xl mb-8">         
         <div class="overflow-x-auto rounded-lg shadow-md">
             @if (empty($rankedUmkms))
                 <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-md relative mb-4 text-center" role="alert">
@@ -119,7 +132,6 @@
                                         class="px-3 py-1 text-sm font-semibold text-white bg-indigo-600 rounded hover:bg-indigo-700">
                                             Edit
                                         </a>
-
                                         <form action="{{ route('umkms.destroy', $umkm['id']) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini?')">
                                             @csrf
                                             @method('DELETE')
@@ -137,12 +149,5 @@
             @endif
         </div>
     </div>
-    {{-- <div class="mt-8 text-center">
-        <a href="{{ route('umkms.create') }}"
-            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105">
-            Add New UMKM
-        </a>
-    </div> --}}
-
 </body>
 </html>

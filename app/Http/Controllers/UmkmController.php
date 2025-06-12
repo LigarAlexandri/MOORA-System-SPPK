@@ -2,118 +2,93 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Umkm; // Import your UMKM Model
-use App\Services\MooraService; // Import your MOORA service
-use Illuminate\Http\Request; // Import Request for handling form submissions
+use App\Models\Umkm;
+use App\Services\MooraService; // Import the MooraService
+use Illuminate\Http\Request;
 
 class UmkmController extends Controller
 {
-    // Property to hold an instance of MooraService
     protected $mooraService;
 
-    // Constructor for dependency injection: MooraService is automatically provided by Laravel
     public function __construct(MooraService $mooraService)
     {
         $this->mooraService = $mooraService;
     }
 
-    /**
-     * Show the form for adding a new UMKM.
-     * Corresponds to GET /umkms/create
-     * @return \Illuminate\View\View
-     */
+    public function index()
+    {
+        $umkms = Umkm::all();
+        return view('umkms.index', compact('umkms'));
+    }
+
     public function create()
     {
         return view('umkms.create');
     }
 
-    public function edit($id)
+    public function store(Request $request)
     {
-        // 1. Find the UMKM by ID
-        // If not found, it will throw a ModelNotFoundException which Laravel handles automatically
-        $umkm = Umkm::findOrFail($id);
+        $request->validate([
+            'nama_bisnis' => 'required',
+            'omzet_penjualan_juta_idr' => 'required|numeric',
+            'profitabilitas_persen' => 'required|numeric',
+            'solvabilitas_der' => 'required|numeric',
+            'beban_utang_eksisting_juta_idr_bln' => 'required|numeric',
+            'skor_kredit' => 'required|numeric',
+        ]);
 
-        // 2. Return the edit view with the UMKM data
+        Umkm::create($request->all());
+
+        return redirect()->route('umkms.index')
+                         ->with('success', 'UMKM added successfully.');
+    }
+
+    public function show(Umkm $umkm)
+    {
+        return view('umkms.show', compact('umkm'));
+    }
+
+    public function edit(Umkm $umkm)
+    {
         return view('umkms.edit', compact('umkm'));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, Umkm $umkm)
     {
-        // 1. Validate the incoming request data
-        $validatedData = $request->validate([
-            'nama_bisnis' => 'required|string|max:255|unique:umkms,nama_bisnis,' . $id, // Unique except for current UMKM
-            'omzet_penjualan_juta_idr' => 'required|integer|min:0',
-            'profitabilitas_persen' => 'required|integer|min:0|max:100',
-            'skor_kredit' => 'required|integer|min:0|max:100',
-            'solvabilitas_der' => 'required|integer|min:0',
-            'beban_utang_eksisting_juta_idr_bln' => 'required|integer|min:0',
+        $request->validate([
+            'nama_bisnis' => 'required',
+            'omzet_penjualan_juta_idr' => 'required|numeric',
+            'profitabilitas_persen' => 'required|numeric',
+            'solvabilitas_der' => 'required|numeric',
+            'beban_utang_eksisting_juta_idr_bln' => 'required|numeric',
+            'skor_kredit' => 'required|numeric',
         ]);
 
-        // 2. Find the UMKM by ID and update it
-        $umkm = Umkm::findOrFail($id);
-        $umkm->update($validatedData);
+        $umkm->update($request->all());
 
-        // 3. Redirect back to the edit form with a success message
-        return redirect()->route('umkms.analysis', $id)->with('success', 'UMKM data updated successfully!');
-        
+        return redirect()->route('umkms.index')
+                         ->with('success', 'UMKM updated successfully.');
     }
 
-    public function destroy($id)
+    public function destroy(Umkm $umkm)
     {
-        // 1. Find the UMKM by ID
-        $umkm = Umkm::findOrFail($id);
-
-        // 2. Delete the UMKM record
         $umkm->delete();
 
-        // 3. Redirect back to the create form with a success message
-        return redirect()->route('umkms.analysis')->with('success', 'UMKM data deleted successfully!');
+        return redirect()->route('umkms.index')
+                         ->with('success', 'UMKM deleted successfully.');
     }
 
-    /**
-     * Store a newly created UMKM in storage.
-     * Handles POST /umkms
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function store(Request $request)
-    {
-        // 1. Validate the incoming request data
-        // Ensures data is present, correct type, and within reasonable bounds
-        $validatedData = $request->validate([
-            'nama_bisnis' => 'required|string|max:255|unique:umkms,nama_bisnis', // Must be unique in 'umkms' table
-            'omzet_penjualan_juta_idr' => 'required|integer|min:0',
-            'profitabilitas_persen' => 'required|integer|min:0|max:100',
-            'skor_kredit' => 'required|integer|min:0|max:100',
-            'solvabilitas_der' => 'required|integer|min:0',
-            'beban_utang_eksisting_juta_idr_bln' => 'required|integer|min:0',
-        ]);
-
-        // 2. Create the UMKM record in the database
-        // Uses the Umkm Model to save data to the 'umkms' table
-        Umkm::create($validatedData);
-
-        // 3. Redirect back to the form with a success message
-        return redirect()->route('umkms.analysis')->with('success', 'UMKM data added successfully!');
-    }
-
-    /**
-     * Display the MOORA analysis and ranking of all UMKMs.
-     * Handles GET /umkms/analysis
-     * @return \Illuminate\View\View
-     */
     public function analyze()
     {
-        // 1. Retrieve all UMKM data from the database
-        // Umkm::all() fetches all records. toArray() converts them into a plain array
-        // which is suitable for the MooraService calculation.
-        $umkms = Umkm::all()->toArray();
+        $umkmsData = Umkm::all()->toArray();
 
-        // 2. Perform MOORA calculation using the service
-        $rankedUmkms = $this->mooraService->calculateRanking($umkms);
+        // Call the MOORA service to get ranked UMKM data and weights
+        $result = $this->mooraService->calculateRanking($umkmsData);
 
-        // 3. Pass the ranked data to the analysis view
-        // compact('rankedUmkms') is a shortcut for ['rankedUmkms' => $rankedUmkms]
-        return view('umkms.analysis', compact('rankedUmkms'));
+        $rankedUmkms = $result['ranked_umkms'];
+        $weights = $result['weights']; // Get the weights
+
+        // Pass both to the view
+        return view('umkms.analysis', compact('rankedUmkms', 'weights'));
     }
 }
