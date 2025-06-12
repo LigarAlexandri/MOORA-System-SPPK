@@ -66,7 +66,8 @@ class UmkmController extends Controller
 
         $umkm->update($request->all());
 
-        return redirect()->route('umkms.index')
+        // Redirect ini sekarang akan berfungsi dengan benar
+        return redirect()->route('umkms.analysis')
                          ->with('success', 'UMKM updated successfully.');
     }
 
