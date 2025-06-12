@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Umkm;
-use App\Services\MooraService; // Import the MooraService
+use App\Services\MooraService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule; // Import a kelas Rule untuk validasi yang lebih kompleks
 
 class UmkmController extends Controller
 {
@@ -17,8 +18,8 @@ class UmkmController extends Controller
 
     public function index()
     {
-        $umkms = Umkm::all();
-        return view('umkms.index', compact('umkms'));
+        // Mengarahkan ke halaman analisis karena file umkms.index tidak ada
+        return redirect()->route('umkms.analysis');
     }
 
     public function create()
@@ -29,7 +30,8 @@ class UmkmController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_bisnis' => 'required',
+            // Tambahkan aturan 'unique:umkms' untuk memastikan nama_bisnis unik di tabel 'umkms'
+            'nama_bisnis' => 'required|unique:umkms,nama_bisnis',
             'omzet_penjualan_juta_idr' => 'required|numeric',
             'profitabilitas_persen' => 'required|numeric',
             'solvabilitas_der' => 'required|numeric',
@@ -39,13 +41,15 @@ class UmkmController extends Controller
 
         Umkm::create($request->all());
 
-        return redirect()->route('umkms.index')
+        return redirect()->route('umkms.analysis')
                          ->with('success', 'UMKM added successfully.');
     }
 
     public function show(Umkm $umkm)
     {
-        return view('umkms.show', compact('umkm'));
+        // Fungsi ini belum memiliki view, bisa diarahkan ke edit atau analysis
+        // Untuk saat ini kita asumsikan tidak digunakan secara aktif
+        return redirect()->route('umkms.edit', $umkm->id);
     }
 
     public function edit(Umkm $umkm)
@@ -56,7 +60,11 @@ class UmkmController extends Controller
     public function update(Request $request, Umkm $umkm)
     {
         $request->validate([
-            'nama_bisnis' => 'required',
+            // Tambahkan aturan Rule::unique yang mengabaikan ID dari UMKM yang sedang diedit
+            'nama_bisnis' => [
+                'required',
+                Rule::unique('umkms')->ignore($umkm->id),
+            ],
             'omzet_penjualan_juta_idr' => 'required|numeric',
             'profitabilitas_persen' => 'required|numeric',
             'solvabilitas_der' => 'required|numeric',
@@ -66,7 +74,6 @@ class UmkmController extends Controller
 
         $umkm->update($request->all());
 
-        // Redirect ini sekarang akan berfungsi dengan benar
         return redirect()->route('umkms.analysis')
                          ->with('success', 'UMKM updated successfully.');
     }
@@ -75,7 +82,7 @@ class UmkmController extends Controller
     {
         $umkm->delete();
 
-        return redirect()->route('umkms.index')
+        return redirect()->route('umkms.analysis')
                          ->with('success', 'UMKM deleted successfully.');
     }
 
@@ -83,13 +90,11 @@ class UmkmController extends Controller
     {
         $umkmsData = Umkm::all()->toArray();
 
-        // Call the MOORA service to get ranked UMKM data and weights
         $result = $this->mooraService->calculateRanking($umkmsData);
 
         $rankedUmkms = $result['ranked_umkms'];
-        $weights = $result['weights']; // Get the weights
+        $weights = $result['weights'];
 
-        // Pass both to the view
         return view('umkms.analysis', compact('rankedUmkms', 'weights'));
     }
 }
