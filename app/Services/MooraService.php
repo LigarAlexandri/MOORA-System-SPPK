@@ -33,17 +33,17 @@ class MooraService
 
         $allCriteria = array_merge($this->beneficialCriteria, $this->nonBeneficialCriteria);
 
-        // Step 1: Normalize the Decision Matrix (Vector Normalization)
-        $denominator = $this->calculateDenominators($umkmsData, $allCriteria);
-        $normalizedMatrix = $this->normalizeMatrix($umkmsData, $allCriteria, $denominator);
-
-        // Step 2: Calculate Weights using the CRITIC Method
+        // Calculate Weights using the CRITIC Method (Now follows the flowchart)
         $weights = $this->calculateCriticWeights($umkmsData, $allCriteria);
 
-        // Step 3: Calculate the MOORA Score (Yi)
-        $rankedUmkms = $this->calculateMooraScores($umkmsData, $normalizedMatrix, $weights);
+        // Step for MOORA: Normalize the Decision Matrix using Vector Normalization
+        $denominator = $this->calculateDenominators($umkmsData, $allCriteria);
+        $normalizedMatrixForMoora = $this->normalizeMatrix($umkmsData, $allCriteria, $denominator);
 
-        // Step 4: Rank the Alternatives
+        // Calculate the MOORA Score (Yi)
+        $rankedUmkms = $this->calculateMooraScores($umkmsData, $normalizedMatrixForMoora, $weights);
+
+        // Rank the Alternatives
         usort($rankedUmkms, function($a, $b) {
             return $b['moora_score'] <=> $a['moora_score'];
         });
@@ -59,7 +59,118 @@ class MooraService
     }
 
     /**
-     * Helper to calculate the square root of the sum of squares for each criterion.
+     * Normalizes the data using Min-Max scaling based on criterion type, as per the flowchart.
+     * This is used specifically for the CRITIC calculation.
+     *
+     * @param array $data The original data.
+     * @param array $allCriteria List of all criteria.
+     * @return array The normalized data.
+     */
+    private function minMaxNormalize(array $data, array $allCriteria): array
+    {
+        $normalizedData = $data; // Initialize with original structure
+
+        foreach ($allCriteria as $criterion) {
+            $values = array_column($data, $criterion);
+            $minVal = min($values);
+            $maxVal = max($values);
+            $range = $maxVal - $minVal;
+
+            if ($range == 0) {
+                foreach ($data as $index => $item) {
+                    $normalizedData[$index][$criterion] = 0;
+                }
+                continue;
+            }
+
+            $isBeneficial = in_array($criterion, $this->beneficialCriteria);
+
+            foreach ($data as $index => $item) {
+                $value = $item[$criterion];
+                if ($isBeneficial) {
+                    // Benefit formula: (x_ij - x_j^min) / (x_j^max - x_j^min)
+                    $normalizedData[$index][$criterion] = ($value - $minVal) / $range;
+                } else {
+                    // Cost formula: (x_j^max - x_ij) / (x_j^max - x_j^min)
+                    $normalizedData[$index][$criterion] = ($maxVal - $value) / $range;
+                }
+            }
+        }
+
+        return $normalizedData;
+    }
+
+    /**
+     * Calculates the weights for each criterion using the CRITIC method based on the flowchart.
+     *
+     * @param array $umkmsData Original UMKM data.
+     * @param array $allCriteria All criteria names.
+     * @return array Associative array of criterion weights.
+     */
+    private function calculateCriticWeights(array $umkmsData, array $allCriteria): array
+    {
+        if (count($umkmsData) < 2) {
+            // CRITIC requires at least 2 alternatives to calculate std dev and correlation.
+            // Return equal weights if not possible.
+            $equalWeight = 1 / count($allCriteria);
+            return array_fill_keys($allCriteria, $equalWeight);
+        }
+
+        // Step 1 (Flowchart): Normalize the matrix using Min-Max
+        $normalizedData = $this->minMaxNormalize($umkmsData, $allCriteria);
+
+        // Step 2 (Flowchart): Calculate Standard Deviation from the normalized matrix
+        $stdDevs = [];
+        foreach ($allCriteria as $criterion) {
+            $normalizedValues = array_column($normalizedData, $criterion);
+            $stdDevs[$criterion] = $this->calculateStandardDeviation($normalizedValues);
+        }
+
+        // Step 3 (Flowchart): Calculate Correlation Coefficient from the normalized matrix
+        $correlationMatrix = [];
+        foreach ($allCriteria as $i => $crit1) {
+            $normalizedValues1 = array_column($normalizedData, $crit1);
+            foreach ($allCriteria as $j => $crit2) {
+                if ($i === $j) {
+                    $correlationMatrix[$crit1][$crit2] = 1;
+                } else {
+                    if (!isset($correlationMatrix[$crit1][$crit2])) {
+                        $normalizedValues2 = array_column($normalizedData, $crit2);
+                        $correlation = $this->calculatePearsonCorrelation($normalizedValues1, $normalizedValues2);
+                        $correlationMatrix[$crit1][$crit2] = $correlation;
+                        $correlationMatrix[$crit2][$crit1] = $correlation;
+                    }
+                }
+            }
+        }
+
+        // Step 4 (Flowchart): Calculate Information Content (Cj)
+        $informationContent = [];
+        foreach ($allCriteria as $critJ) {
+            $sumOfOneMinusCorrelation = 0;
+            foreach ($allCriteria as $critK) {
+                $sumOfOneMinusCorrelation += (1 - $correlationMatrix[$critJ][$critK]);
+            }
+            $informationContent[$critJ] = $stdDevs[$critJ] * $sumOfOneMinusCorrelation;
+        }
+
+        // Step 5 (Flowchart): Normalize Information Content to get CRITIC Weights
+        $weights = [];
+        $sumOfInformationContent = array_sum($informationContent);
+        if ($sumOfInformationContent == 0) {
+            $equalWeight = 1 / count($allCriteria);
+            return array_fill_keys($allCriteria, $equalWeight);
+        }
+        
+        foreach ($allCriteria as $criterion) {
+            $weights[$criterion] = $informationContent[$criterion] / $sumOfInformationContent;
+        }
+
+        return $weights;
+    }
+
+    /**
+     * Helper to calculate the square root of the sum of squares for each criterion (for MOORA Vector Normalization).
      */
     private function calculateDenominators(array $umkmsData, array $allCriteria): array
     {
@@ -75,7 +186,7 @@ class MooraService
     }
 
     /**
-     * Helper to normalize the decision matrix.
+     * Helper to normalize the decision matrix (for MOORA Vector Normalization).
      */
     private function normalizeMatrix(array $umkmsData, array $allCriteria, array $denominator): array
     {
@@ -118,68 +229,6 @@ class MooraService
     }
 
     /**
-     * Calculates the weights for each criterion using the CRITIC method.
-     *
-     * @param array $umkmsData Original UMKM data.
-     * @param array $allCriteria All criteria names.
-     * @return array Associative array of criterion weights.
-     */
-    private function calculateCriticWeights(array $umkmsData, array $allCriteria): array
-    {
-        $numAlternatives = count($umkmsData);
-        $weights = [];
-        $informationContent = [];
-
-        // 1. Extract criterion values into arrays
-        $criterionValues = [];
-        foreach ($allCriteria as $criterion) {
-            $criterionValues[$criterion] = array_column($umkmsData, $criterion);
-        }
-
-        // 2. Calculate Standard Deviation for each criterion
-        $stdDevs = [];
-        foreach ($allCriteria as $criterion) {
-            $stdDevs[$criterion] = $this->calculateStandardDeviation($criterionValues[$criterion]);
-        }
-
-        // 3. Calculate Correlation Coefficient between all pairs of criteria
-        $correlationMatrix = [];
-        foreach ($allCriteria as $i => $crit1) {
-            $correlationMatrix[$crit1] = [];
-            foreach ($allCriteria as $j => $crit2) {
-                if ($i === $j) {
-                    $correlationMatrix[$crit1][$crit2] = 1; // Correlation with itself is 1
-                } else {
-                    $correlationMatrix[$crit1][$crit2] = $this->calculatePearsonCorrelation(
-                        $criterionValues[$crit1],
-                        $criterionValues[$crit2]
-                    );
-                }
-            }
-        }
-
-        // 4. Calculate Information Content (Cj)
-        // Cj = StdDev_j * Sum(1 - r_jk)
-        foreach ($allCriteria as $critJ) {
-            $sumOfOneMinusCorrelation = 0;
-            foreach ($allCriteria as $critK) {
-                $sumOfOneMinusCorrelation += (1 - $correlationMatrix[$critJ][$critK]);
-            }
-            $informationContent[$critJ] = $stdDevs[$critJ] * $sumOfOneMinusCorrelation;
-        }
-
-        // 5. Normalize Information Content to get CRITIC Weights
-        $sumOfInformationContent = array_sum($informationContent);
-        foreach ($allCriteria as $criterion) {
-            $weights[$criterion] = ($sumOfInformationContent != 0)
-                ? $informationContent[$criterion] / $sumOfInformationContent
-                : 0; // Handle division by zero
-        }
-
-        return $weights;
-    }
-
-    /**
      * Calculates the mean of an array of numbers.
      */
     private function calculateMean(array $numbers): float
@@ -195,7 +244,7 @@ class MooraService
      */
     private function calculateStandardDeviation(array $numbers): float
     {
-        if (count($numbers) < 2) { // Need at least 2 numbers for standard deviation
+        if (count($numbers) < 2) {
             return 0;
         }
         $mean = $this->calculateMean($numbers);
@@ -203,7 +252,6 @@ class MooraService
         foreach ($numbers as $number) {
             $sumOfSquaredDifferences += pow($number - $mean, 2);
         }
-        // Using N-1 for sample standard deviation, commonly used in CRITIC
         return sqrt($sumOfSquaredDifferences / (count($numbers) - 1));
     }
 
@@ -214,7 +262,7 @@ class MooraService
     {
         $n = count($x);
         if ($n !== count($y) || $n < 2) {
-            return 0; // Cannot calculate correlation
+            return 0;
         }
 
         $meanX = $this->calculateMean($x);
