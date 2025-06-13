@@ -18,7 +18,7 @@
   <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto py-4">
     <a href="#" class="flex items-center space-x-3 rtl:space-x-reverse">
         <img src="https://flowbite.com/docs/images/logo.svg" class="h-8" alt="Flowbite Logo" />
-        <span class="self-center text-2xl font-semibold whitespace-nowrap text-white">Flowbite</span>
+        <span class="self-center text-2xl font-semibold whitespace-nowrap text-white">FinAssess UMKM</span>
     </a>
     <button data-collapse-toggle="navbar-hamburger" type="button" class="inline-flex items-center justify-center p-2 w-10 h-10 text-sm text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-700 :text-white :hover:bg-green-600 :focus:ring-white" aria-controls="navbar-hamburger" aria-expanded="false">
       <span class="sr-only">Open main menu</span>
